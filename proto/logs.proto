@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package logger;
+
+service LogServer {
+    rpc Log(LogEntry) returns (LogAck) {};
+}
+
+
+message LogEntry {
+    string level = 1;
+    string file = 2;
+    string line = 3;
+    string message = 4;
+    string timestamp = 5;
+}
+
+message LogAck {
+    bool success = 1;
+}
