@@ -11,9 +11,9 @@ add_executable(logger_server server/main.cpp)
 add_executable(logger_client client/main.cpp)
 
 target_link_libraries(logger_server
-  libproto
+  PRIVATE libproto
 )
 target_link_libraries(logger_client
-  libproto
-  liblogger 
+  PRIVATE libproto
+  PRIVATE liblogger 
 )

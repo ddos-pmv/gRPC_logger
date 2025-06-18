@@ -7,6 +7,8 @@
 #include <mutex>
 #include <string>
 
+#include "RingBuffer.h"
+
 namespace logger {
 
 enum class LogLevel {
@@ -16,15 +18,10 @@ enum class LogLevel {
   ERROR,
 };
 
-struct RingBuffer {
-  int counter = 0;
-};
-
 inline const char* toString(LogLevel level) {
   static const char* levelStr[] = {"DEBUG", "INFO", "WARNING", "ERROR"};
   return levelStr[static_cast<int>(level)];
 }
-
 class Logger {
  public:
   // Удаляем копирование и присваивание
@@ -35,7 +32,7 @@ class Logger {
   static Logger& getInstance();
 
   // Thread-local буфер
-  static thread_local RingBuffer buf;
+  static thread_local RingBuffer<8192> ring_buffer;
 
   // Установка выходного потока
   void setOutStream(std::ostream& oStream);
@@ -61,6 +58,5 @@ class Logger {
   // std::ofstream file_;
   std::ostream* out_ = &std::cout;  // По умолчанию вывод в консоль
 };
-
 
 }  // namespace logger

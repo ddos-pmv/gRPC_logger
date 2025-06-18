@@ -1,6 +1,5 @@
 #include <arm_neon.h>
 #include <grpcpp/create_channel.h>
-#include <intrin.h>
 #include <logger.h>
 
 #include <memory>
@@ -41,26 +40,34 @@
 
 using logger::Logger;
 
+struct st {
+  int a;
+  char* arr;
+};
+
 int main() {
-  constexpr int NUM_THREADS = 5;
-  constexpr int NUM_ITERATIONS = 1000;
-  std::vector<std::thread> threads;
+  // constexpr int NUM_THREADS = 5;
+  // constexpr int NUM_ITERATIONS = 1000;
+  // std::vector<std::thread> threads;
 
-  for (int i = 0; i < NUM_THREADS; i++) {
-    threads.emplace_back([]() {
-      for (int i = 0; i < NUM_ITERATIONS; i++) {
-        Logger::getInstance().log(logger::LogLevel::INFO, __FILE__, __LINE__,
-                                  "msg");
-      }
+  // st a;
+  // a.arr = new char[20];
 
-      std::cout << "Current thead: " << std::this_thread::get_id()
-                << " buf.counter: " << Logger::getInstance().buf.counter
-                << std::endl;
-    });
-  }
+  // for (int i = 0; i < NUM_THREADS; i++) {
+  //   threads.emplace_back([]() {
+  //     for (int i = 0; i < NUM_ITERATIONS; i++) {
+  //       Logger::getInstance().log(logger::LogLevel::INFO, __FILE__, __LINE__,
+  //                                 "msg");
+  //     }
 
-  for (auto& t : threads) {
-    t.join();
-  }
+  //     std::cout << "Current thead: " << std::this_thread::get_id()
+  //               << " buf.counter: " << Logger::getInstance().buf.counter
+  //               << std::endl;
+  //   });
+  // }
+
+  // for (auto& t : threads) {
+  //   t.join();
+  // }
   return 0;
 }
