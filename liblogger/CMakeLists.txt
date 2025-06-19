@@ -1,6 +1,6 @@
 file(GLOB LIBLOGGER_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 file(GLOB LIBLOGGER_HDRS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
-file(GLOB LIBLOGGER_HDRS "${CMAKE_CURRENT_SOURCE_DIR}/*.tpp")
+# file(GLOB LIBLOGGER_TPLS "${CMAKE_CURRENT_SOURCE_DIR}/*.tpp")
 
 execute_process(
     COMMAND getconf PAGESIZE
@@ -9,13 +9,14 @@ execute_process(
 )
 
 
-add_library(liblogger STATIC
+add_library(liblogger INTERFACE
   ${LIBLOGGER_SRCS}
   ${LIBLOGGER_HDRS}
+  ${LIBLOGGER_TPLS}
 )
 
-target_compile_definitions(liblogger PUBLIC PAGE_SIZE=${PAGE_SIZE})
+target_compile_definitions(liblogger INTERFACE PAGE_SIZE=${PAGE_SIZE})
 # Включаем директорию с заголовочными файлами
-target_include_directories(liblogger PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(liblogger INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(liblogger PRIVATE libproto)
+target_link_libraries(liblogger INTERFACE libproto)

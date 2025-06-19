@@ -1,10 +1,6 @@
-#include <libc.h>
-#include <sys/syscall.h>
 
-#include <cmath>
-#include <thread>
 
-#include "RingBuffer.h"
+#include "ring_buffer.h"
 
 #ifndef PAGE_SIZE
 #warning "PAGE_SIZE not defined"
@@ -24,8 +20,8 @@ static inline int memfd_create(const char* name, unsigned int flags) {
 }
 #endif
 
-template <size_t N>
-RingBuffer<N>::RingBuffer() {
+template <typename PackedObject, size_t N>
+RingBuffer<PackedObject, N>::RingBuffer() {
   constexpr static size_t NUM_PAGES = (N + PAGE_SIZE - 1) / PAGE_SIZE;
   buffer_size_ = NUM_PAGES * PAGE_SIZE;
 
@@ -59,20 +55,45 @@ RingBuffer<N>::RingBuffer() {
     std::exit(EXIT_FAILURE);
 }
 
-template <size_t N>
-bool RingBuffer<N>::write(uint8_t* data, size_t size) {
+template <typename PackedObject, size_t N>
+bool RingBuffer<PackedObject, N>::write(const PackedObject& entry) {
+  constexpr size_t entry_size = sizeof(PackedObject);
   size_t head = head_.load();
 
   while (true) {
-    size_t tail = tail_.load(std::memory_order::memory_order_relaxed);
+    size_t tail = tail_.load(std::memory_order_relaxed);
 
-    if (buffer_size_ - (tail - head) < size) return false;
+    if (buffer_size_ - (tail - head) < entry_size) return false;
 
-    if (tail_.compare_exchange_weak(tail, tail + size)) {
-      std::memcpy(buffer_[tail], data, size);
+    if (tail_.compare_exchange_weak(tail, tail + entry_size)) {
+      std::memcpy(buffer_[tail], &entry, entry_size);
       return true;
     }
   }
+  return false;
+}
+
+/*
+!!!!! REALISATION FOR ONE CONSUMER THREAD
+*/
+template <typename PackedObject, size_t N>
+bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
+  size_t tail = tail_.load(std::memory_order_relaxed);
+  size_t head = head_.load(std::memory_order_relaxed);
+
+  constexpr size_t entry_size = sizeof(PackedObject);
+
+  if (tail - head < entry_size) return false;
+
+  // copy data from buffer to object
+  std::memcpy(&out, buffer_[head], entry_size);
+
+  if (head + entry_size > buffer_size_) {
+    head_.store(head + entry_size - buffer_size_, std::memory_order_acquire);
+    tail_.fetch_sub(buffer_size_, std::memory_order_relaxed);
+  }
+
+  return true;
 }
 
 // bool get(queue_t *q, uint8_t *data, size_t size) {
@@ -88,9 +109,7 @@ bool RingBuffer<N>::write(uint8_t* data, size_t size) {
 //     return true;
 // }
 
-template <size_t N>
-bool RingBuffer<N>::read(uint8_t* data, size_t size) {
-    
-}
+// template <size_t N>
+// bool RingBuffer<N>::read(uint8_t* data, size_t size) {}
 
 }  // namespace logger
