@@ -1,4 +1,8 @@
+#include <libc.h>
+#include <sys/syscall.h>
 
+#include <cmath>
+#include <thread>
 
 #include "ring_buffer.h"
 
@@ -55,22 +59,32 @@ RingBuffer<PackedObject, N>::RingBuffer() {
     std::exit(EXIT_FAILURE);
 }
 
+/*
+!!!!!!!!!
+REALISATION FOR 1 producer!!!!!!
+*/
 template <typename PackedObject, size_t N>
 bool RingBuffer<PackedObject, N>::write(const PackedObject& entry) {
+  // std::cout << "BUFFER write()" << std::endl;
   constexpr size_t entry_size = sizeof(PackedObject);
   size_t head = head_.load();
 
   while (true) {
     size_t tail = tail_.load(std::memory_order_relaxed);
 
-    if (buffer_size_ - (tail - head) < entry_size) return false;
-
-    if (tail_.compare_exchange_weak(tail, tail + entry_size)) {
-      std::memcpy(buffer_[tail], &entry, entry_size);
-      return true;
+    if (buffer_size_ - (tail - head) < entry_size) {
+      // std::cout << "head: " << head << " tail: " << tail_ << std::endl;
+      return false;
     }
+
+    std::memcpy(&buffer_[tail], &entry, entry_size);
+    tail_.fetch_add(entry_size);
+    return true;
+    // if (tail_.compare_exchange_weak(tail, tail + entry_size)) {
+    //   std::memcpy(&buffer_[tail], &entry, entry_size);
+    //   return true;
+    // }
   }
-  return false;
 }
 
 /*
@@ -78,20 +92,30 @@ bool RingBuffer<PackedObject, N>::write(const PackedObject& entry) {
 */
 template <typename PackedObject, size_t N>
 bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
+  // std::cout << "BUFFER read()" << std::endl;
   size_t tail = tail_.load(std::memory_order_relaxed);
   size_t head = head_.load(std::memory_order_relaxed);
 
   constexpr size_t entry_size = sizeof(PackedObject);
 
-  if (tail - head < entry_size) return false;
+  // std::cout << "head: " << head << std::endl;
+  // std::cout << "tail: " << tail << " ";
+
+  if (tail - head < entry_size) {
+    std::cout << "false" << '\n';
+    return false;
+  }
 
   // copy data from buffer to object
-  std::memcpy(&out, buffer_[head], entry_size);
+  std::memcpy(&out, &buffer_[head], entry_size);
 
-  if (head + entry_size > buffer_size_) {
-    head_.store(head + entry_size - buffer_size_, std::memory_order_acquire);
+  head += entry_size;
+
+  if (head > buffer_size_) {
+    head -= buffer_size_;
     tail_.fetch_sub(buffer_size_, std::memory_order_relaxed);
   }
+  head_.store(head, std::memory_order_release);
 
   return true;
 }
@@ -111,5 +135,10 @@ bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
 
 // template <size_t N>
 // bool RingBuffer<N>::read(uint8_t* data, size_t size) {}
+
+template <typename PackedObject, size_t N>
+RingBuffer<PackedObject, N>::~RingBuffer() {
+  munmap(buffer_, 2 * buffer_size_);
+}
 
 }  // namespace logger

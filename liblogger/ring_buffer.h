@@ -17,6 +17,7 @@ template <typename PackedObject, size_t N>
 class RingBuffer {
  public:
   RingBuffer();
+  ~RingBuffer();
 
   bool write(const PackedObject& entry);
   bool read(PackedObject& out);
@@ -24,8 +25,8 @@ class RingBuffer {
  private:
   std::array<char, 18> shm_name_;  // thread unique name for shm_open
   size_t buffer_size_;
-  std::atomic<size_t> head_;  // pointer to read
-  std::atomic<size_t> tail_;  // pointer to write
+  std::atomic<size_t> head_ = 0;  // pointer to read
+  std::atomic<size_t> tail_ = 0;  // pointer to write
   uint8_t* buffer_;
 };
 
