@@ -1,6 +1,8 @@
 .vscode
 cmake
 build
+generated/*
+!generated/.gitkeep
 CMakeCache.txt
 CMakeFiles
 Makefile

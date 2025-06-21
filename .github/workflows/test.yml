@@ -27,6 +27,12 @@ jobs:
         brew update
         brew install cmake protobuf grpc googletest
 
+    - name: Show versions
+      run: |
+        which protoc
+        protoc --version
+        brew info protobuf
+
     - name: Configure CMake
       run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -S .
 
