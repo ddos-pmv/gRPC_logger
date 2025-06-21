@@ -62,29 +62,31 @@ RingBuffer<PackedObject, N>::RingBuffer() {
 /*
 !!!!!!!!!
 REALISATION FOR 1 producer!!!!!!
+
+need add tail_reserved for mulitple producers
 */
 template <typename PackedObject, size_t N>
 bool RingBuffer<PackedObject, N>::write(const PackedObject& entry) {
   // std::cout << "BUFFER write()" << std::endl;
   constexpr size_t entry_size = sizeof(PackedObject);
-  size_t head = head_.load();
+  ssize_t tail = tail_.load(std::memory_order_relaxed);
+  ssize_t head = head_.load(std::memory_order_relaxed);
 
-  while (true) {
-    size_t tail = tail_.load(std::memory_order_relaxed);
+  size_t available_space;
 
-    if (buffer_size_ - (tail - head) < entry_size) {
-      // std::cout << "head: " << head << " tail: " << tail_ << std::endl;
-      return false;
-    }
+  // wait consumer to sub the tail
+  if (tail + entry_size > buffer_size_ * 2) return false;
 
-    std::memcpy(&buffer_[tail], &entry, entry_size);
-    tail_.fetch_add(entry_size);
-    return true;
-    // if (tail_.compare_exchange_weak(tail, tail + entry_size)) {
-    //   std::memcpy(&buffer_[tail], &entry, entry_size);
-    //   return true;
-    // }
-  }
+  if (tail >= head)
+    available_space = buffer_size_ - (tail - head);
+  else
+    return false;
+
+  if (available_space < entry_size) return false;  // Не хватает места
+
+  std::memcpy(&buffer_[tail], &entry, entry_size);
+  tail_.fetch_add(entry_size, std::memory_order_acq_rel);
+  return true;
 }
 
 /*
@@ -92,17 +94,12 @@ bool RingBuffer<PackedObject, N>::write(const PackedObject& entry) {
 */
 template <typename PackedObject, size_t N>
 bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
-  // std::cout << "BUFFER read()" << std::endl;
-  size_t tail = tail_.load(std::memory_order_relaxed);
-  size_t head = head_.load(std::memory_order_relaxed);
+  ssize_t tail = tail_.load(std::memory_order_acquire);
+  ssize_t head = head_.load(std::memory_order_relaxed);
 
   constexpr size_t entry_size = sizeof(PackedObject);
 
-  // std::cout << "head: " << head << std::endl;
-  // std::cout << "tail: " << tail << " ";
-
   if (tail - head < entry_size) {
-    std::cout << "false" << '\n';
     return false;
   }
 
@@ -110,6 +107,37 @@ bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
   std::memcpy(&out, &buffer_[head], entry_size);
 
   head += entry_size;
+
+  if (head > buffer_size_) {
+    head -= buffer_size_;
+    tail_.fetch_sub(buffer_size_, std::memory_order_relaxed);
+  }
+  head_.store(head, std::memory_order_release);
+
+  return true;
+}
+
+template <typename PackedObject, size_t N>
+bool RingBuffer<PackedObject, N>::read(PackedObject* const batch,
+                                       size_t& batch_size) {
+  ssize_t tail = tail_.load(std::memory_order_acquire);
+  ssize_t head = head_.load(std::memory_order_relaxed);
+
+  constexpr size_t entry_size = sizeof(PackedObject);
+
+  if (tail - head < entry_size) {
+    return false;
+  }
+
+  size_t objects_to_read =
+      std::min<size_t>(batch_size, (tail - head) / entry_size);
+
+  batch_size = objects_to_read;
+
+  // copy data from buffer to object
+  std::memcpy(batch, &buffer_[head], objects_to_read * entry_size);
+
+  head += objects_to_read * entry_size;
 
   if (head > buffer_size_) {
     head -= buffer_size_;
@@ -132,9 +160,6 @@ bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
 //     }
 //     return true;
 // }
-
-// template <size_t N>
-// bool RingBuffer<N>::read(uint8_t* data, size_t size) {}
 
 template <typename PackedObject, size_t N>
 RingBuffer<PackedObject, N>::~RingBuffer() {

@@ -21,6 +21,7 @@ class RingBuffer {
 
   bool write(const PackedObject& entry);
   bool read(PackedObject& out);
+  bool read(PackedObject* const batch, size_t& batch_size);
 
  private:
   std::array<char, 18> shm_name_;  // thread unique name for shm_open
