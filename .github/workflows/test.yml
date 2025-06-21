@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install dependencies
-          run: |
+      run: |
         brew update
         brew install cmake protobuf grpc googletest
 
