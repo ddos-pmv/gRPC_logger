@@ -1,5 +1,7 @@
 find_package(GTest REQUIRED)
 
+enable_testing()
+
 if (NOT GTest_FOUND)
         message(FATAL_ERROR "GTest not found!")
 endif()
@@ -12,4 +14,8 @@ add_executable(logger_tests ${TEST_SRCS})
 target_link_libraries(logger_tests
   PRIVATE liblogger
   PRIVATE GTest::GTest
+)
+
+add_test(NAME logger_tests
+  COMMAND logger_tests
 )
