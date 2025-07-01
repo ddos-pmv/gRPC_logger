@@ -7,7 +7,23 @@ if (NOT GTest_FOUND)
 endif()
 
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/toy-queue)
+add_library(toy-queue STATIC
+  toy-queue/queue.c
+)
+
+set_target_properties(toy-queue PROPERTIES
+    LINKER_LANGUAGE C
+)
+
+target_include_directories(toy-queue
+  PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/toy-queue
+)
+
+target_link_libraries(toy-queue
+  PUBLIC
+  pthread
+)
 
 file(GLOB TEST_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 
