@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <queue_internal.h>
 #include <ring_buffer.h>
 
 using namespace logger;

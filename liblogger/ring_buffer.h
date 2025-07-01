@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#include <mutex>
 #include <thread>
 
 namespace logger {
@@ -30,7 +31,6 @@ class RingBuffer {
   std::atomic<size_t> tail_ = 0;  // pointer to write
   uint8_t* buffer_;
 };
-
 }  // namespace logger
 
 #include "ring_buffer.tpp"
