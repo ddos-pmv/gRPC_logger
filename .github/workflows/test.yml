@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         brew update
-        brew install cmake protobuf grpc googletest
+        brew install cmake protobuf grpc googletest boost
 
     - name: Show versions
       run: |
