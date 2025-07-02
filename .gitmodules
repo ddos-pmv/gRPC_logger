@@ -1,3 +1,0 @@
-[submodule "tests/toy-queue"]
-	path = tests/toy-queue
-	url = https://github.com/tmick0/toy-queue.git
