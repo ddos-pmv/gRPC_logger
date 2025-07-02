@@ -8,7 +8,8 @@ endif()
 
 
 add_library(toy-queue STATIC
-  toy-queue/queue.c
+    toy-queue/queue.c
+    toy-queue/queue.h
 )
 
 set_target_properties(toy-queue PROPERTIES
