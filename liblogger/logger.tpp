@@ -38,7 +38,7 @@ void log(LogLevel level, const char* file, uint16_t line, MsgType&& msg) {
   }
   ring_buffer.write(entry);
 
-  buffers_queue.push(&ring_buffer);
+  shared_queue.push(&ring_buffer);
   // if (!is_added) {
   //   buffers_queue_.push(&ring_buffer);
   //   is_added = true;

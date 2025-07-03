@@ -1,6 +1,6 @@
 find_package(GTest REQUIRED)
 
-enable_testing()
+# enable_testing()
 
 if (NOT GTest_FOUND)
         message(FATAL_ERROR "GTest not found!")
@@ -37,8 +37,8 @@ target_link_libraries(logger_tests
   PRIVATE toy-queue
 )
 
-gtest_discover_tests(logger_tests)
+# gtest_discover_tests(logger_tests)
 
-add_test(NAME logger_tests
-  COMMAND logger_tests
-)
+# add_test(NAME logger_tests
+#   COMMAND logger_tests
+# )

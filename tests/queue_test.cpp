@@ -33,6 +33,7 @@ TEST(QueueTest, SingleProducerSingleConsumer) {
 
   constexpr size_t kCount = 5'000'000;
   constexpr size_t kMsgLen = 72;
+  constexpr size_t batchSize = 128;
 
   std::atomic<bool> producerDone = false;
 

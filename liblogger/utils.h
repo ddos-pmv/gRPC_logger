@@ -3,6 +3,8 @@
 #include <boost/lockfree/queue.hpp>
 #include <cstdint>
 
+#include "shared_queue.h"
+
 namespace logger {
 
 struct PackedEntry {
@@ -13,7 +15,8 @@ struct PackedEntry {
   char message[256];
 } __attribute__((packed));
 
-constexpr size_t kRingBufferSize = 8192;
+constexpr size_t kRingBufferSize = 16'000;
+constexpr size_t kBatchSize = 128;
 
 enum class LogLevel {
   DEBUG,
@@ -22,7 +25,8 @@ enum class LogLevel {
   ERROR,
 };
 
-boost::lockfree::queue<RingBuffer<PackedEntry, kRingBufferSize>*> buffers_queue;
+static SharedQueue<RingBuffer<PackedEntry, kRingBufferSize>*, 1024>
+    shared_queue;
 
 const char* toString(LogLevel level) {
   static const char* levelStr[] = {"DEBUG", "INFO", "WARNING", "ERROR"};

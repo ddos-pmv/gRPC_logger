@@ -5,6 +5,7 @@
 
 #include "ring_buffer.h"
 #include "utils.h"
+#include "worker_pool.h"
 namespace logger {
 
 // Основная функция логирования

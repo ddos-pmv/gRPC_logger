@@ -17,7 +17,7 @@ execute_process(
 add_library(liblogger INTERFACE
   ${LIBLOGGER_SRCS}
   ${LIBLOGGER_HDRS}
- ${LIBLOGGER_TPLS}
+  ${LIBLOGGER_TPLS}
 )
 target_compile_definitions(liblogger INTERFACE PAGE_SIZE=${PAGE_SIZE})
 

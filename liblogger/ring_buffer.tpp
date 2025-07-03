@@ -59,12 +59,10 @@ RingBuffer<PackedObject, N>::RingBuffer() {
     std::exit(EXIT_FAILURE);
 }
 
-/*
-!!!!!!!!!
-REALISATION FOR 1 producer!!!!!!
-
-need add tail_reserved for mulitple producers
-*/
+//
+//
+// SPSC write(entry)
+//
 template <typename PackedObject, size_t N>
 bool RingBuffer<PackedObject, N>::write(const PackedObject& entry) {
   // std::cout << "BUFFER write()" << std::endl;
@@ -89,11 +87,26 @@ bool RingBuffer<PackedObject, N>::write(const PackedObject& entry) {
   return true;
 }
 
-/*
-!!!!! REALISATION FOR ONE CONSUMER THREAD
-*/
+//
+//
+// SPSC read(out)
+//
 template <typename PackedObject, size_t N>
 bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
+  bool expect = false;
+
+  for (int i = 0; i < spinCount; i++) {
+    if (is_reading_.compare_exchange_weak(expect, true,
+                                          std::memory_order_acquire))
+      break;
+    expect = false;
+    std::this_thread::yield();
+  }
+
+  if (!is_reading_.load(std::memory_order_relaxed)) {
+    return false;
+  }
+
   ssize_t tail = tail_.load(std::memory_order_acquire);
   ssize_t head = head_.load(std::memory_order_relaxed);
 
@@ -113,13 +126,37 @@ bool RingBuffer<PackedObject, N>::read(PackedObject& out) {
     tail_.fetch_sub(buffer_size_, std::memory_order_relaxed);
   }
   head_.store(head, std::memory_order_release);
-
+  is_reading_.store(false, std::memory_order_release);
   return true;
 }
 
+//
+// isReading
+//
+template <typename PackedObject, size_t N>
+bool RingBuffer<PackedObject, N>::isReading() {
+  return is_reading_.load(std::memory_order_relaxed);
+}
+
+//
+// read(batch, batc_size)
+//
 template <typename PackedObject, size_t N>
 bool RingBuffer<PackedObject, N>::read(PackedObject* const batch,
                                        size_t& batch_size) {
+  bool expect = false;
+  for (int i = 0; i < spinCount; i++) {
+    if (is_reading_.compare_exchange_weak(expect, true,
+                                          std::memory_order_acquire))
+      break;
+    expect = false;
+    std::this_thread::yield();
+  }
+
+  if (!is_reading_.load(std::memory_order_relaxed)) {
+    return false;
+  }
+
   ssize_t tail = tail_.load(std::memory_order_acquire);
   ssize_t head = head_.load(std::memory_order_relaxed);
 
@@ -144,7 +181,7 @@ bool RingBuffer<PackedObject, N>::read(PackedObject* const batch,
     tail_.fetch_sub(buffer_size_, std::memory_order_relaxed);
   }
   head_.store(head, std::memory_order_release);
-
+  is_reading_.store(false, std::memory_order_release);
   return true;
 }
 

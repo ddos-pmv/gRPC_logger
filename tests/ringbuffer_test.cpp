@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <queue_internal.h>
 #include <ring_buffer.h>
 
 using namespace logger;
@@ -13,8 +12,12 @@ struct Dummy {
   }
 };
 
+constexpr int kCount = 5'000'000;
+constexpr int kBufferSize = 20'000;
+static constexpr size_t BATCH_SZ = 128;
+
 TEST(RingBufferTest, WriteReadBasic) {
-  RingBuffer<Dummy, 32768> buffer;
+  RingBuffer<Dummy, kBufferSize> buffer;
   Dummy data{1, "data1"};
 
   ASSERT_TRUE(buffer.write(data));
@@ -31,8 +34,128 @@ TEST(RingBufferTest, WriteReadBasic) {
 }
 
 TEST(RingBufferTest, SingleProducerSingleConsumer) {
-  constexpr int kCount = 5'000'000;
-  ;
+  RingBuffer<Dummy, 20000> buffer;
+
+  std::atomic<bool> producer_done = false;
+  std::atomic<size_t> errors = 0;
+
+  std::thread producer([&]() {
+    size_t waits_to_write = 0;
+    Dummy item;
+
+    for (int i = 0; i < kCount; ++i) {
+      item.number = i;
+      std::snprintf(item.msg, sizeof(item.msg), "Item %d", i);
+
+      while (!buffer.write(item)) {
+        waits_to_write += 1;
+        // std::this_thread::yield();
+      }
+    }
+    producer_done = true;
+    std::cout << "Producer waited " << waits_to_write << " times\n";
+  });
+
+  std::thread consumer([&]() {
+    Dummy entry;
+    size_t waits_to_read = 0;
+    size_t i = 0;
+
+    while (i < kCount) {
+      if (buffer.read(entry)) {
+        if (entry.number != i ||
+            std::strncmp(entry.msg, ("Item " + std::to_string(i)).c_str(),
+                         sizeof(entry.msg)) != 0) {
+          ++errors;
+        }
+        ++i;
+      } else if (producer_done.load()) {
+        if (buffer.read(entry)) {
+          ++i;
+        } else {
+          break;
+        }
+      } else {
+        ++waits_to_read;
+        // std::this_thread::yield();
+      }
+    }
+
+    std::cout << "Consumer waited " << waits_to_read << " times\n";
+  });
+
+  producer.join();
+  consumer.join();
+
+  ASSERT_EQ(errors.load(), 0);
+}
+
+TEST(RingBufferTest, SingleProducerSingleConsumerBatch) {
+  RingBuffer<Dummy, 20000> buffer;
+  std::atomic<bool> producer_done{false};
+  std::atomic<size_t> errors = 0;
+
+  std::thread producer([&]() {
+    size_t waits_to_write = 0;
+    Dummy item;
+
+    for (int i = 0; i < kCount; ++i) {
+      item.number = i;
+      std::snprintf(item.msg, sizeof(item.msg), "Item %d", i);
+
+      while (!buffer.write(item)) {
+        waits_to_write += 1;
+        // std::this_thread::yield();
+      }
+    }
+
+    producer_done = true;
+    std::cout << "Producer waited " << waits_to_write << " times\n";
+  });
+
+  std::thread consumer([&]() {
+    Dummy batch[BATCH_SZ];
+    size_t batch_size;
+    size_t waits_to_read = 0;
+    size_t index = 0;
+
+    while (index < kCount) {
+      batch_size = BATCH_SZ;
+      if (buffer.read(batch, batch_size)) {
+        for (size_t i = 0; i < batch_size; ++i) {
+          const Dummy& d = batch[i];
+          if (d.number != index ||
+              std::strncmp(d.msg, ("Item " + std::to_string(index)).c_str(),
+                           sizeof(d.msg)) != 0) {
+            ++errors;
+          }
+          ++index;
+        }
+      } else if (producer_done.load(std::memory_order_acquire)) {
+        batch_size = BATCH_SZ;
+        if (buffer.read(batch, batch_size)) {
+          for (size_t i = 0; i < batch_size; ++i) {
+            ++index;
+          }
+        } else {
+          break;
+        }
+      } else {
+        waits_to_read += 1;
+        // std::this_thread::yield();
+      }
+    }
+
+    std::cout << "Consumer waited " << waits_to_read << " times\n";
+  });
+
+  producer.join();
+  consumer.join();
+
+  ASSERT_EQ(errors.load(), 0);
+}
+
+TEST(RingBufferTest, SPSCWithHeapAllocs) {
   RingBuffer<Dummy, 20000> buffer;
 
   std::vector<Dummy> source(kCount);
@@ -51,7 +174,7 @@ TEST(RingBufferTest, SingleProducerSingleConsumer) {
     for (const auto& item : source) {
       while (!buffer.write(item)) {
         waits_to_write += 1;
-        std::this_thread::yield();  // не нагружаем CPU, ждём
+        // std::this_thread::yield();  // не нагружаем CPU, ждём
       }
     }
     producer_done = true;
@@ -77,7 +200,7 @@ TEST(RingBufferTest, SingleProducerSingleConsumer) {
 
       } else {
         waits_to_read += 1;
-        std::this_thread::yield();
+        // std::this_thread::yield();
       }
     }
 
@@ -93,11 +216,8 @@ TEST(RingBufferTest, SingleProducerSingleConsumer) {
   }
 }
 
-static constexpr size_t BATCH_SZ = 128;
-
-TEST(RingBufferTest, SingleProducerSingleConsumerBatch) {
-  constexpr int kCount = 5'000'000;
-  RingBuffer<Dummy, 20000> buffer;
+TEST(RingBufferTest, SPSCBatchWithHeapAllocs) {
+  RingBuffer<Dummy, kBufferSize> buffer;
   std::vector<Dummy> source(kCount);
 
   // fill source data
@@ -116,7 +236,7 @@ TEST(RingBufferTest, SingleProducerSingleConsumerBatch) {
     for (const auto& item : source) {
       while (!buffer.write(item)) {
         waits_to_write += 1;
-        std::this_thread::yield();  // не нагружаем CPU, ждём
+        // std::this_thread::yield();  // не нагружаем CPU, ждём
       }
     }
     producer_done = true;
@@ -146,7 +266,7 @@ TEST(RingBufferTest, SingleProducerSingleConsumerBatch) {
 
       } else {
         waits_to_read += 1;
-        std::this_thread::yield();
+        // std::this_thread::yield();
       }
     }
     std::cout << "counsumer waited " << waits_to_read << " times\n";

@@ -3,6 +3,16 @@ gRPC logger for high loaded services
 
 
 ---
+
+### **ToDo:**
+ - batch write to ring buffer
+ - multiple consumer/producer in ring buffer
+### **ToThink about:**
+ - do i need ring buffer?
+ - creat PackedEntry right in ring buffer
+ - paged RingBuffer, like memory pages (with sizeof PackedEntry)
+
+---
 ## **RingBuffer.** Ключевые особенности
 
 ### 1. Реализация на разделяемой памяти
@@ -15,7 +25,7 @@ gRPC logger for high loaded services
 ### 2. Потокобезопасность
 - Атомарные операции через `std::atomic`
 - Lock-free реализация для операций чтения/записи
-- Поддерживает модель multiple-producer/single-consumer
+- Поддерживает модель single-producer/single-consumer
 
 ### 3. Шаблонная реализация
 ```cpp
