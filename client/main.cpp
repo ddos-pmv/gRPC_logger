@@ -1,11 +1,7 @@
 #include <arm_neon.h>
-#include <grpcpp/create_channel.h>
-#include <logger.h>
+#include <log.h>
 
 #include <memory>
-
-#include "logs.grpc.pb.h"
-#include "logs.pb.h"
 
 // using logger::LogEntry;
 // using logger::LogServer;
@@ -35,7 +31,6 @@
 //     }
 //   }
 // };
-#include <log.h>
 #include <time.h>
 
 #include <string>
@@ -50,16 +45,16 @@
 // }
 
 int main() {
-  LOG(LEVEL, "hello");
-  LOG(LEVEL, "hello");
-  LOG(LEVEL, "hello");
+  // LOG(LEVEL, "hello");
+  // LOG(LEVEL, "hello");
+  // LOG(LEVEL, "hello");
 
-  timespec ts;
-  clock_gettime(CLOCK_REALTIME, &ts);
+  // timespec ts;
+  // clock_gettime(CLOCK_REALTIME, &ts);
 
-  std::cout << ts.tv_sec << std::endl;
+  // std::cout << ts.tv_sec << std::endl;
 
-  std::cout << static_cast<uint32_t>(ts.tv_sec) << std::endl;
+  // std::cout << static_cast<uint32_t>(ts.tv_sec) << std::endl;
 
   // std::thread worker([]() { LOG(LEVEL, "hello"); });
   // worker.join();

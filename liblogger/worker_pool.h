@@ -5,6 +5,7 @@
 #include <mutex>
 #include <thread>
 
+#include "grpc_client.h"
 #include "shared_queue.h"
 
 namespace logger {

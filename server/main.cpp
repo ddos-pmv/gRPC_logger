@@ -5,7 +5,6 @@
 
 #include <iostream>
 
-#include "absl/log/initialize.h"
 #include "logs.grpc.pb.h"
 #include "logs.pb.h"
 
@@ -15,13 +14,26 @@ using grpc::Server;
 using grpc::Status;
 
 class LogServerImpl final : public logger::LogServer::Service {
-  Status Log(::grpc::ServerContext* context, const ::logger::LogEntry* request,
-             ::logger::LogAck* response) {
-    std::cout << "Got message: " << request->message()
-              << " Level:" << request->level() << '\n';
+  Status StreamLogs(::grpc::ServerContext* context,
+                    ::grpc::ServerReader< ::logger::LogEntry>* reader,
+                    ::logger::LogAck* response) override {
+    ::logger::LogEntry entry;
+    while (reader->Read(&entry)) {
+      std::cout << "[" << entry.level() << "]:" << entry.file() << ":"
+                << entry.line() << ": " << entry.message() << '\n';
+    }
+
     response->set_success(true);
+
     return Status::OK;
   }
+  // Log(::grpc::ServerContext* context, const ::logger::LogEntry* request,
+  //     ::logger::LogAck* response) {
+  //   std::cout << "Got message: " << request->message()
+  //             << " Level:" << request->level() << '\n';
+  //   response->set_success(true);
+  //   return Status::OK;
+  // }
 };
 
 void runServer() {
