@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
 #include <string>
 
 namespace grpclog {
@@ -19,10 +18,9 @@ enum class LogLevel : uint8_t {
 
 struct Config {
   std::string server_address = "localhost:50051";
-  size_t queue_capacity = 65536;  // Number of messages in queue
-  size_t batch_size = 100;        // Messages per gRPC batch
-  std::optional < uint32_t flush_interval_ms =
-      100;                                // Max time before force flush
+  size_t queue_capacity = 65536;          // Number of messages in queue
+  size_t batch_size = 100;                // Messages per gRPC batch
+  uint32_t flush_interval_ms = 100;       // Max time before force flush
   uint32_t connection_timeout_ms = 5000;  // gRPC connection timeout
   uint32_t retry_attempts = 3;            // Connection retry attempts
   bool fallback_to_console = false;       // Fallback if server unavailable
@@ -133,13 +131,13 @@ bool is_connected();
 #define GLOG_ERROR(msg) ::grpclog::error(msg, __FILE__, __LINE__)
 #define GLOG_CRITICAL(msg) ::grpclog::critical(msg, __FILE__, __LINE__)
 
-// // Format macros (when C++20 format is not available)
-// #define GLOG_TRACE_F(fmt, ...) ::grpclog::trace_f(fmt, __VA_ARGS__)
-// #define GLOG_DEBUG_F(fmt, ...) ::grpclog::debug_f(fmt, __VA_ARGS__)
-// #define GLOG_INFO_F(fmt, ...) ::grpclog::info_f(fmt, __VA_ARGS__)
-// #define GLOG_WARN_F(fmt, ...) ::grpclog::warn_f(fmt, __VA_ARGS__)
-// #define GLOG_ERROR_F(fmt, ...) ::grpclog::error_f(fmt, __VA_ARGS__)
-// #define GLOG_CRITICAL_F(fmt, ...) ::grpclog::critical_f(fmt, __VA_ARGS__)
+// Format macros (when C++20 format is not available)
+#define GLOG_TRACE_F(fmt, ...) ::grpclog::trace_f(fmt, __VA_ARGS__)
+#define GLOG_DEBUG_F(fmt, ...) ::grpclog::debug_f(fmt, __VA_ARGS__)
+#define GLOG_INFO_F(fmt, ...) ::grpclog::info_f(fmt, __VA_ARGS__)
+#define GLOG_WARN_F(fmt, ...) ::grpclog::warn_f(fmt, __VA_ARGS__)
+#define GLOG_ERROR_F(fmt, ...) ::grpclog::error_f(fmt, __VA_ARGS__)
+#define GLOG_CRITICAL_F(fmt, ...) ::grpclog::critical_f(fmt, __VA_ARGS__)
 
 // Conditional logging (only log if condition is true)
 #define GLOG_INFO_IF(condition, msg)                         \
